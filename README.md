@@ -50,11 +50,11 @@ public class GetProcessor extends AbstractProcessor {
     /**
      * init 메서드를 오버라이딩 하여, 컴파일시 정보를 얻어야 한다
      *
-     * Names : 추후 메소드를 생성하여 parm or method 이름 생성을 위함
+     * Names : 추후 메소드를 생성하여 param or method 이름 생성을 위함
      *
      * Treemaker : Abstact Syntax Tree 를 생성하는데 사용하게 된다.
      * JCTree는 AST를 만들어내는 최상위 클래스 이다. 하지만 JCTree를 이용하여 new 를 사용하여 직접 생성할 수 없기에 Context를 이용해 AST 를 인식하고
-     * Treemaker 라는 객체를 사용해야 한다는 것이다. 수정함 예) method 정의, method 의 parm 값 정의
+     * Treemaker 라는 객체를 사용해야 한다는 것이다. 수정함 예) method 정의, method 의 param 값 정의
      *
      * Trees : 어노테이션 프로스세의 process의 RoundEnvironment 가 코드의 element를 순회 하면서 받는 element의 정보들을 trees 에 넣기위에 선언
      * */
@@ -159,9 +159,13 @@ public class GetProcessor extends AbstractProcessor {
 #### 분석해보기
 ```
 우선 내가 이해한 과정은 크게
--> 어노테이션 프로세서가 타겟의 element를 확보한다
--> treeMaker를 통해 getter 매서드 생성
--> 해당 매서드를 트리에 삽입
+-> 어노테이션 프로세서가 타겟(class,interface,enum~)의 element를 확보한다
+-> treeMaker를 통해 타겟 element에 기반하여 이에 대한 getter 매서드 생성
+-> 새로 만든 매서드를 매서드 트리에 삽입
+
+abstract syntax tree
+컴퓨터 과학에서 추상 구문 트리, 또는 간단히 구문 트리는 프로그래밍 언어로 작성된 소스 코드의 추상 구문 구조의 트리이다. 
+이 트리의 각 노드는 소스 코드에서 발생되는 구조를 나타낸다.
 ```
 1. 타겟으로 삼을 어노테이션 생성
 ```
@@ -191,7 +195,142 @@ public class GetProcessor extends AbstractProcessor {
 }
 
 ```
-ㅓㅓ
-ㅓㄴ
-ㅓㅗ
+3. 어노테이션 프로세서의 init()
+```
+- init 메서드를 오버라이딩 하여, 컴파일시 정보를 얻어야 한다.
+
+
+@SupportedAnnotationTypes("annotation.Get")
+@SupportedSourceVersion(SourceVersion.RELEASE_11)
+@AutoService(Processor.class)
+public class GetProcessor extends AbstractProcessor {
+    private ProcessingEnvironment processingEnvironment;
+    private Trees trees;
+    private TreeMaker treeMaker;
+    private Names names;
+    private Context context;
+
+
+    /**
+     * init 메서드를 오버라이딩 하여, 컴파일시 정보를 얻어야 한다
+     *
+     * Names : 추후 메소드를 생성하여 param or method 이름 생성을 위함
+     *
+     * Treemaker : Abstact Syntax Tree 를 생성하는데 사용하게 된다.
+     * JCTree는 AST를 만들어내는 최상위 클래스 이다. 하지만 JCTree를 이용하여 new 를 사용하여 직접 생성할 수 없기에 Context를 이용해 AST 를 인식하고
+     * Treemaker 라는 객체를 사용해야 한다는 것이다. 수정함 예) method 정의, method 의 param 값 정의
+     *
+     * Trees : 어노테이션 프로스세의 process의 RoundEnvironment 가 코드의 element를 순회 하면서 받는 element의 정보들을 trees 에 넣기위에 선언
+     * */
+    @Override
+    public synchronized void init(ProcessingEnvironment processingEnv) {
+        JavacProcessingEnvironment javacProcessingEnvironment = (JavacProcessingEnvironment) processingEnv;
+        super.init(processingEnv);
+        this.processingEnvironment = processingEnv;
+        this.trees = Trees.instance(processingEnv);
+        this.context = javacProcessingEnvironment.getContext();
+        this.treeMaker = TreeMaker.instance(context);
+        this.names = Names.instance(context);
+    }
+    
+    
+    
+    ....
+
+   }
+   
+   
+내가 생각하기에 init의 키 포인트는 AST 생성을 위한 Treemaker
+AST는 소스코드가 어떠한 동작을 하게되는지에 대한 트리라고 생각. ex) if-condition-then 표현식과 같은 구문 구조
+Treemaker를 통해 AST를 초기 생성한다.
+```
+
+4. 어노테이션 프로세서의 process()
+```
+    /**
+     *  process 의 리턴값으로 어놈테이션을 처리하고 난 뒤, 다른 어노테이션이 지원되지 않도록 조정
+     * @return true (이 필드, 클래스는 끝남) or false (이, 필드 클래스는 끝나지 않음)
+     */
+    @Override
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        System.out.println("process 메서드 실행");
+        // TreePathScanner 모든 하위 트리노드를 방문하고, 상위 노드에 대한 경로를 유지하는 tree visitor
+        TreePathScanner<Object, CompilationUnitTree> scanner = new TreePathScanner<Object, CompilationUnitTree>(){
+            /**
+             * CompillationUnitTree 는 소스파일에서 패키지 선언에서 부터 abstract syntax tree 를 정의함
+             * ClassTree -> 클래스 , 인터페이스, enum 어노테이션을 트리노드로 선언
+             * class 정의 위에 어노테이션 작성시 내부적으로 메소드 실행
+             * CompilationUnitTree AST(Abstract Syntax Tree 의 최상단)
+             */
+            @Override
+            public Trees visitClass(ClassTree classTree, CompilationUnitTree unitTree){
+                    JCTree.JCCompilationUnit compilationUnit = (JCTree.JCCompilationUnit) unitTree;
+                    // .java 파일인지 확인후 accept 를 통해 treeTransLator, 작성 메소드 생성
+                    if (compilationUnit.sourcefile.getKind() == JavaFileObject.Kind.SOURCE){
+                        compilationUnit.accept(new TreeTranslator() {
+                            @Override
+                            public void visitClassDef(JCTree.JCClassDecl jcClassDecl) {
+                                super.visitClassDef(jcClassDecl);
+                                // Class 내부에 정의된 모든 member 를 싹다 가져옴.
+                                List<JCTree> members = jcClassDecl.getMembers();
+                                // Syntax tree 에서 모든 member 변수 get
+                                for(JCTree member : members){
+                                    if (member instanceof JCTree.JCVariableDecl){
+                                        // member 변수에 대한 getter 메서드 생성
+                                        List<JCTree.JCMethodDecl> getters = createGetter((JCTree.JCVariableDecl) member);
+                                        for(JCTree.JCMethodDecl getter : getters){
+                                            jcClassDecl.defs = jcClassDecl.defs.prepend(getter);
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    return trees;
+            }
+        };
+        /**
+         * RoundEnvironment
+         * getElementsAnnotatedWith() -> @Get 의 어노테이션이 붙여져 있는 모든 element 를 불러 일으킨다.
+         */
+        for (final Element element : roundEnv.getElementsAnnotatedWith(Get.class)) {
+            // 현재 어노테이션은 Type 이고 여기서 Class 뿐만 아니라, interface 와 enum 에도 작성이 가능하므로 class만 지정할 수 있도록
+            if(element.getKind() != ElementKind.CLASS){
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "@Get annotation cant be used on" + element.getSimpleName());
+            }else{
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "@Get annotation Processing " + element.getSimpleName());
+                final TreePath path = trees.getPath(element);
+                scanner.scan(path, path.getCompilationUnit());
+            }
+        }
+
+        return true;
+    }
+    
+    
+process() 매서드의 키 포인트는 어노테이션 프로세서의 로직이라는 점
+return 값은 boolean 으로 java compiler가 return 값이 true 이면 “이 어노테이션을 처리했고, 다른 annotation processor가 처리하지 않아도 된다”라고 해준다.
+
+1.
+if (compilationUnit.sourcefile.getKind() == JavaFileObject.Kind.SOURCE)
+-> 누구를 대상으로 할 것인가? : JavaFileObject.Kind.SOURCE(class, interface, enum)에 해당하는지 확인. 여기서는 class를 대상을하고자한다.
+
+2.
+List<JCTree> members = jcClassDecl.getMembers();
+-> Class 내부에 정의된 member를 가져온다
+
+3. 
+-> 각 멤버변수마다 getter 매서드를 생성한다( createGetter()를 활용하여 )
+-> 그리고 이 새로운 get~()매서드를 매서드 트리에 prepend한다.
+for(JCTree member : members) {
+    if (member instanceof JCTree.JCVariableDecl) {
+        // member 변수에 대한 getter 메서드 생성.
+        List<JCTree.JCMethodDecl> getters = createGetter((JCTree.JCVariableDecl) member);
+
+        for(JCTree.JCMethodDecl getter : getters) {
+            jcClassDecl.defs = jcClassDecl.defs.prepend(getter);
+        }
+    }
+}
+```
 
