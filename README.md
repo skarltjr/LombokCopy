@@ -154,3 +154,44 @@ public class GetProcessor extends AbstractProcessor {
 - <img width="1590" alt="스크린샷 2022-05-29 오후 11 29 55" src="https://user-images.githubusercontent.com/62214428/170874523-8cc947b1-5d70-489c-be4b-788977fcecfb.png">
 
 
+
+## -----------
+#### 분석해보기
+```
+우선 내가 이해한 과정은 크게
+-> 어노테이션 프로세서가 타겟의 element를 확보한다
+-> treeMaker를 통해 getter 매서드 생성
+-> 해당 매서드를 트리에 삽입
+```
+1. 타겟으로 삼을 어노테이션 생성
+```
+ElementType.TYPE : class, interface를 대상으로한다
+RetentionPolicy.SOURCE : 어노테이션을 어디까지 가지고 사용할 것이냐 이다. 여기의 @Get은 컴파일하고 난 뒤에 필요가 없기 때문에 SOURCE 상에서만 유지(.java까지만)
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.SOURCE)
+public @interface Get {
+}
+```
+
+2. 어노테이션 프로세서
+```
+어노테이션 프로세서라고 함은, 내가 만든 어노테이션에 구체적인 동작 행위를 정의하기위해서 자바에서 제공하는 api
+
+/**
+ * SupportedAnnotationTypes 어떤 어노테이션을 위한 프로세서 인가?
+ * SupportedSourceVersion jdk 지원 정보
+ * AutoService(Processor.class) MAINFEST 자동생성
+ */
+@SupportedAnnotationTypes("me.maru.anno.Get")
+@SupportedSourceVersion(SourceVersion.RELEASE_11)
+@AutoService(Processor.class)
+public class GetProcessor extends AbstractProcessor {
+
+}
+
+```
+ㅓㅓ
+ㅓㄴ
+ㅓㅗ
+
