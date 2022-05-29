@@ -162,6 +162,9 @@ public class GetProcessor extends AbstractProcessor {
 -> 어노테이션 프로세서가 타겟(class,interface,enum~)의 element를 확보한다
 -> 타겟 element에 기반하여 이에 대한 getter 매서드 생성하고 treeMaker를 통해 생성된 새로운 하나의 트리에 적용
 -> 새로 만든 트리를 매서드 트리에 삽입
+-> 즉 AST는 결국 어떠한 동작을할지 정의한 트리인데
+    -> 그럼 이제 @Get 어노테이션이 달린 클래스를 만나면? -> 새로운 getter 매서드를 생성하고 하나의 트리를 만든 후 -> AST 매서드 트리에 삽입 
+      
 
 abstract syntax tree
 컴퓨터 과학에서 추상 구문 트리, 또는 간단히 구문 트리는 프로그래밍 언어로 작성된 소스 코드의 추상 구문 구조의 트리이다. 
